@@ -1,7 +1,27 @@
-check_jenkins_job_time
-======================
+check_jenkins
+=============
 
-A Nagios plugin to monitor build time of Jenkins jobs.
+A set of 3 Nagios plugins to monitor Jenkins health.
+
+*  check_jenkins.pl
+*  check_jenkins_version.pl
+*  check_jenkins_job_time.pl
+
+## check_jenkins.pl ##
+
+This Nagios plugin count the number of jobs of a Jenkins instance.
+
+It can check that the total number of jobs will not exeed the WARNING and CRITICAL thresholds.
+
+It also count the number of disabled, passed, running and failed jobs and can check that the ratio of failed jobs against active jobs is over a WARNING and CRITICAL thresholds.
+
+Performance data are:
+
+    jobs=<count>;<warn>;<crit> passed=<count> failed=<count>;<warn>;<crit> disabled=<count> running=<count>
+
+## check_jenkins_version.pl ##
+
+## check_jenkings_job_time.pl ##
 
 This Nagios plugin check that running Jenkins jobs are not taking unusual time to complete.
 
@@ -15,15 +35,7 @@ This module is written in Perl and requite LWP:: and JSON:: packages.
 It has been checked on Windows and Linux plateforms and can be run either directly or
 through NRPE by Nagios server.
 
-Usage:
-------
+### Usage: ###
 
-    check_jenkins_job_time.pl [OPTIONS] <master-jenkins-url>
-        where OPTIONS are:\n");
-        -h             Print this help\n");
-        -d             Turns on debug traces\n");
-        -u <user>      User authentication\n");
-        -p <password>  Password\n");
-        -w <percent>   Warning threshold in %\n");
-        -c <percent>   Critical threshold in %\n");
-        -j <job>       The job name (default all jobs)\n");
+    check_jenkins_job_time.pl --man
+        will print the man page for this command
