@@ -7,6 +7,8 @@ A set of 3 Nagios plugins to monitor Jenkins health.
 *  check_jenkins_version.pl
 *  check_jenkins_job_time.pl
 
+These 3 perl script use HTTP requests to query Jenkins API (json).
+
 ## check_jenkins.pl ##
 
 This Nagios plugin count the number of jobs of a Jenkins instance.
@@ -18,8 +20,25 @@ It also count the number of disabled, passed, running and failed jobs and can ch
 Performance data are:
 
     jobs=<count>;<warn>;<crit> passed=<count> failed=<count>;<warn>;<crit> disabled=<count> running=<count>
+    
+### Usage: ###
 
+    check_jenkins.pl --man
+        will print the manual page for this command
+    
 ## check_jenkins_version.pl ##
+
+This Nagios plugin check the version number of a Jenkins instance.
+
+It can verify that the version is greater than specified versions for WARNING ant CRITICAL thresholds.
+
+With jenkins version **1.466** and above, it also check if some plugins need to be updated.
+
+### Usage: ###
+
+    check_jenkins_version.pl --man
+        will print the manual page for this command
+
 
 ## check_jenkings_job_time.pl ##
 
@@ -38,4 +57,4 @@ through NRPE by Nagios server.
 ### Usage: ###
 
     check_jenkins_job_time.pl --man
-        will print the man page for this command
+        will print the manual page for this command
