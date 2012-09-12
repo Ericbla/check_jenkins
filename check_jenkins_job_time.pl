@@ -27,7 +27,7 @@ use constant {
 };
 
 use constant API_SUFFIX => "/api/json";
-our $VERSION = '1.2';
+our $VERSION = '1.3';
 my %args;
 my $ciMasterUrl;
 my $jobName = '(All)';
@@ -82,6 +82,10 @@ if ($jobName eq '(All)') {
     my $jobs = $content->{'jobs'}; # ref to array
     my $jobs_count = scalar(@$jobs);
     trace("Got ", $jobs_count, " jobs\n");
+    if ($jobs_count == 0) {
+        print("OK: job: All (No Job)\n");
+        exit OK;
+    }
 
     for (my $i = 0; $i <$jobs_count; $i++) {
         my $job_url = $jobs->[$i]{'url'};
