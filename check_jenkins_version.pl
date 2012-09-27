@@ -108,14 +108,15 @@ if ($jenkins_version >= '1.466') {
     trace ("Found " . scalar(@$plugins) . " plugins\n");
     my $require_update_count = 0;
     foreach my $plugin (@$plugins) {
-        trace("plugin=$plugin->{'longName'}, version=$plugin->{'version'}\n");
+        trace("plugin=$plugin->{'longName'}, version=$plugin->{'version'}");
         if ($plugin->{'enabled'} && $plugin->{'active'}) {
             if ($plugin->{'hasUpdate'}) {
-                trace(" ===> Needs update\n");
+                trace(" ==> NEEDS UPDATE");
                 $status_line_ext .= "$plugin->{'longName'}, v=$plugin->{'version'}\n";
                 $require_update_count++;
             }
         }
+        trace("\n");
     }
     $status_line .= " " . scalar(@$plugins) . " plugins installed ($require_update_count need update)\n";
 }
