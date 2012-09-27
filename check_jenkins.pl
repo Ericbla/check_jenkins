@@ -28,7 +28,7 @@ use constant {
 
 use constant API_SUFFIX => "/api/json";
 
-our $VERSION = '1.5';
+our $VERSION = '1.6';
 my %args;
 my $ciMasterUrl;
 my $jobs_warn = -1;
@@ -86,14 +86,7 @@ my $obj = $json->decode($res->content);
 my $jobs = $obj->{'jobs'}; # ref to array
 my $jobs_count = scalar(@$jobs);
 trace ("Found " . $jobs_count . " jobs\n");
-if ($jobs_crit != -1 && $jobs_count > $jobs_crit) {
-  print "CRITICAL: jobs count: ", $jobs_count, " exeeds critical threshold: ", $jobs_crit, "\n";
-  exit CRITICAL;
-}
-if ($jobs_warn != -1 && $jobs_count > $jobs_warn) {
-  print "WARNING: jobs count: ", $jobs_count, " exeeds warning threshold: ", $jobs_warn, "\n";
-  exit WARNING;
-}
+
 my $disabled_jobs = 0;
 my $failed_jobs = 0;
 my $passed_jobs = 0;
@@ -112,6 +105,21 @@ if (! defined($args{noperfdata})) {
     $perfdata .= ' failed=' . $failed_jobs . ';' . $fail_warn . ';' . $fail_crit;
     $perfdata .= ' disabled=' . $disabled_jobs;
     $perfdata .= ' running=' . ($arctive_jobs - $passed_jobs - $failed_jobs);
+}
+
+if ($jobs_crit != -1 && $jobs_count > $jobs_crit) {
+  print "CRITICAL: jobs count: ", $jobs_count, " exeeds critical threshold: ", $jobs_crit, "\n";
+  if (! defined($args{noperfdata})) {
+    print ('|', $perfdata, "\n");
+  }
+  exit CRITICAL;
+}
+if ($jobs_warn != -1 && $jobs_count > $jobs_warn) {
+  print "WARNING: jobs count: ", $jobs_count, " exeeds warning threshold: ", $jobs_warn, "\n";
+  if (! defined($args{noperfdata})) {
+    print ('|', $perfdata, "\n");
+  }
+  exit WARNING;
 }
 my $failed_ratio = $failed_jobs * 100 / $arctive_jobs;
 if ($failed_ratio > $fail_crit) {
