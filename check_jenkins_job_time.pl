@@ -27,7 +27,7 @@ use constant {
 };
 
 use constant API_SUFFIX => "/api/json";
-our $VERSION = '1.3';
+our $VERSION = '1.4';
 my %args;
 my $ciMasterUrl;
 my $jobName = '(All)';
@@ -52,10 +52,7 @@ GetOptions(\%args,
 
 HelpMessage({'-msg' => 'Missing Jenkins url parameter', '-exitval' => UNKNOWN}) if scalar(@ARGV) != 1;
 $ciMasterUrl = $ARGV[0];
-my $delim = $/;
-$/ = '/';
-chomp($ciMasterUrl);
-$/ = $delim;
+$ciMasterUrl =~ s/\/$//;
 
 my $ua = LWP::UserAgent->new();
 $ua->timeout($timeout);
@@ -78,7 +75,15 @@ if ($jobName eq '(All)') {
         exit UNKNOWN;
     }
     my $json = new JSON;
-    my $content = $json->decode($res->content);
+    my $content = {};
+    eval {
+        $content = $json->decode($res->content);
+        1;
+    } or do {
+        $@ =~ s/\n//m;
+        print ("UNKNOWN: can't parse JSON content (error $@) from master api: ", $ciMasterUrl . API_SUFFIX, "\n");
+        return UNKNOWN;
+    };
     my $jobs = $content->{'jobs'}; # ref to array
     my $jobs_count = scalar(@$jobs);
     trace("Got ", $jobs_count, " jobs\n");
@@ -103,6 +108,7 @@ exit $status;
 
 sub test_job {
     my $job_url = shift;
+    $job_url =~ s/\/$//;
     my $req = HTTP::Request->new( GET => $job_url . API_SUFFIX);
     trace("GET ", $job_url . API_SUFFIX, " ...\n");
     my $res = $ua->request($req);
@@ -112,7 +118,15 @@ sub test_job {
     }
     
     my $json = new JSON;
-    my $content = $json->decode($res->content);
+    my $content = {};
+    eval {
+        $content = $json->decode($res->content);
+        1;
+    } or do {
+        $@ =~ s/\n//m;
+        print ("UNKNOWN: can't parse JSON content (error $@) from job api: ", $job_url . API_SUFFIX, "\n");
+        return UNKNOWN;
+    };
     my $job_name = $content->{'name'};
     trace("Job: ", $job_name);
     if (! $content->{'buildable'}) {
@@ -134,16 +148,25 @@ sub test_job {
         }
     }
     my $build_url = $content->{'lastBuild'}->{'url'};
+    $build_url =~ s/\/$//;
     $req = HTTP::Request->new( GET => $build_url . API_SUFFIX);
     trace('GET ', $build_url . API_SUFFIX, " ...\n");
     $res = $ua->request($req);
     if (! $res->is_success) {
         # Can't get the build API
-        print "UNKNOWN: job: ", $job_name, ", can't get build api: ", $build_url, " for build number=", $build_number, ", url=", $job_url, "\n";
+        print "UNKNOWN: job: ", $job_name, ", can't get build api: ", $build_url . API_SUFFIX, " for build number=", $build_number, ", url=", $job_url, "\n";
         return UNKNOWN;
     }
-    my $json = new JSON;
-    my $content = $json->decode($res->content);
+    $json = new JSON;
+    $content = {};
+    eval {
+        $content = $json->decode($res->content);
+        1;
+    } or do {
+        $@ =~ s/\n//m;
+        print ("UNKNOWN: can't parse JSON content (error $@) from build api: ", $build_url . API_SUFFIX, "\n");
+        return UNKNOWN;
+    };
     if (! $content->{'building'}) {
         # This build is not currently running 
         trace(", build number=", $build_number, " is not running \n");
