@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-
 #
 # This Nagios plugin count the number of jobs of a Jenkins instance.
 # It can check that the total number of jobs will not exeed the WARNING and CRITICAL thresholds.
@@ -10,144 +9,159 @@
 #
 # Author: Eric Blanchard
 #
-
-
 use strict;
 use LWP::UserAgent;
 use JSON;
-use Getopt::Long qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
-use Pod::Usage;
+use Getopt::Long
+  qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
+use Pod::Usage qw(pod2usage);
 
 # Nagios return values
 use constant {
-  OK => 0,
-  WARNING => 1,
-  CRITICAL => 2,
-  UNKNOWN => 3,
+    OK       => 0,
+    WARNING  => 1,
+    CRITICAL => 2,
+    UNKNOWN  => 3,
 };
-
 use constant API_SUFFIX => "/api/json";
-
-our $VERSION = '1.6';
+our $VERSION = '1.7';
 my %args;
 my $ciMasterUrl;
-my $jobs_warn = -1;
-my $jobs_crit = -1;
-my $fail_warn = 100;
-my $fail_crit = 100;
-my $debug = 0;
+my $jobs_warn   = -1;
+my $jobs_crit   = -1;
+my $fail_warn   = 100;
+my $fail_crit   = 100;
+my $debug       = 0;
 my $status_line = '';
-my $exit_code = UNKNOWN;
-my $timeout = 30;
+my $exit_code   = UNKNOWN;
+my $timeout     = 10;
 
-GetOptions(\%args,
-           'version|v' => sub { VersionMessage({'-exitval' => UNKNOWN}) },
-           'help|h' => sub { HelpMessage({'-exitval' => UNKNOWN}) },
-           'man' => sub { pod2usage({'-verbose' => 2, '-exitval' => UNKNOWN}) },
-           'debug|d' => \$debug,
-           'timeout|t=i' => \$timeout,
-           'proxy=s',
-           'noproxy',
-           'noperfdata',
-           'warning|w=i' => \$jobs_warn,
-           'critical|c=i' => \$jobs_crit,
-           'failedwarn=i' => \$fail_warn,
-           'failedcrit=i' => \$fail_crit) or pod2usage({'-exitval' => UNKNOWN});
+# Functions prototypes
+sub trace(@);
 
-HelpMessage({'-msg' => 'Missing Jenkins url parameter', '-exitval' => UNKNOWN}) if scalar(@ARGV) != 1;
+# Main
+GetOptions(
+    \%args,
+    'version|v' => sub { VersionMessage( { '-exitval' => UNKNOWN } ) },
+    'help|h'    => sub { HelpMessage(    { '-exitval' => UNKNOWN } ) },
+    'man' => sub { pod2usage( { '-verbose' => 2, '-exitval' => UNKNOWN } ) },
+    'debug|d'     => \$debug,
+    'timeout|t=i' => \$timeout,
+    'proxy=s',
+    'noproxy',
+    'noperfdata',
+    'warning|w=i'  => \$jobs_warn,
+    'critical|c=i' => \$jobs_crit,
+    'failedwarn=i' => \$fail_warn,
+    'failedcrit=i' => \$fail_crit
+  )
+  or pod2usage( { '-exitval' => UNKNOWN } );
+HelpMessage(
+    { '-msg' => 'Missing Jenkins url parameter', '-exitval' => UNKNOWN } )
+  if scalar(@ARGV) != 1;
 $ciMasterUrl = $ARGV[0];
-my $delim = $/;
-$/ = '/';
-chomp($ciMasterUrl);
-$/ = $delim;
+$ciMasterUrl =~ s/\/$//;
 
 # Master API request
 my $ua = LWP::UserAgent->new();
 $ua->timeout($timeout);
-if (defined($args{proxy})) {
-    $ua->proxy('http', $args{proxy});
-} else {
-    if (! defined($args{noproxy})) {
+if ( defined( $args{proxy} ) ) {
+    $ua->proxy( 'http', $args{proxy} );
+}
+else {
+    if ( !defined( $args{noproxy} ) ) {
+
         # Use HTTP_PROXY environment variable
         $ua->env_proxy;
     }
 }
-
-my $url = $ciMasterUrl . API_SUFFIX;
-my $req = HTTP::Request->new(GET => $url);
+my $url = $ciMasterUrl . API_SUFFIX . '?tree=jobs[color,name]';
+my $req = HTTP::Request->new( GET => $url );
 trace("GET $url ...\n");
 my $res = $ua->request($req);
-if (!$res->is_success) {
-    print "Failed retrieving Master via API (API status line: $res->{status_line})";
+if ( !$res->is_success ) {
+    print "Failed retrieving $url ($res->{status_line})";
     exit UNKNOWN;
 }
-my $json = new JSON;
-my $obj = $json->decode($res->content);
-my $jobs = $obj->{'jobs'}; # ref to array
+my $json       = new JSON;
+my $obj        = $json->decode( $res->content );
+my $jobs       = $obj->{'jobs'};                   # ref to array
 my $jobs_count = scalar(@$jobs);
-trace ("Found " . $jobs_count . " jobs\n");
-
+trace( "Found " . $jobs_count . " jobs\n" );
 my $disabled_jobs = 0;
-my $failed_jobs = 0;
-my $passed_jobs = 0;
-my $running_jobs = 0;
+my $failed_jobs   = 0;
+my $passed_jobs   = 0;
+my $running_jobs  = 0;
+
 foreach my $job (@$jobs) {
-    trace('job: ', $job->{'name'}, ' color=', $job->{'color'}, "\n");
+    trace( 'job: ', $job->{'name'}, ' color=', $job->{'color'}, "\n" );
     $disabled_jobs++ if $job->{'color'} eq 'disabled';
-    $passed_jobs++ if $job->{'color'} eq 'blue';
-    $failed_jobs++ if $job->{'color'} eq 'red';
+    $passed_jobs++   if $job->{'color'} eq 'blue';
+    $failed_jobs++   if $job->{'color'} eq 'red';
 }
 my $arctive_jobs = $jobs_count - $disabled_jobs;
-my $perfdata = '';
-if (! defined($args{noperfdata})) {
-    $perfdata = 'jobs=' . $jobs_count . ';' . ($jobs_warn  == -1 ? '' : $jobs_warn) . ';' . ($jobs_crit == -1 ? '' : $jobs_crit);
+my $perfdata     = '';
+if ( !defined( $args{noperfdata} ) ) {
+    $perfdata = 'jobs='
+      . $jobs_count . ';'
+      . ( $jobs_warn == -1 ? '' : $jobs_warn ) . ';'
+      . ( $jobs_crit == -1 ? '' : $jobs_crit );
     $perfdata .= ' passed=' . $passed_jobs;
-    $perfdata .= ' failed=' . $failed_jobs . ';' . $fail_warn . ';' . $fail_crit;
+    $perfdata .=
+      ' failed=' . $failed_jobs . ';' . $fail_warn . ';' . $fail_crit;
     $perfdata .= ' disabled=' . $disabled_jobs;
-    $perfdata .= ' running=' . ($arctive_jobs - $passed_jobs - $failed_jobs);
+    $perfdata .= ' running=' . ( $arctive_jobs - $passed_jobs - $failed_jobs );
 }
-
-if ($jobs_crit != -1 && $jobs_count > $jobs_crit) {
-  print "CRITICAL: jobs count: ", $jobs_count, " exeeds critical threshold: ", $jobs_crit, "\n";
-  if (! defined($args{noperfdata})) {
-    print ('|', $perfdata, "\n");
-  }
-  exit CRITICAL;
+if ( $jobs_crit != -1 && $jobs_count > $jobs_crit ) {
+    print "CRITICAL: jobs count: ", $jobs_count, " exeeds critical threshold: ",
+      $jobs_crit, "\n";
+    if ( !defined( $args{noperfdata} ) ) {
+        print( '|', $perfdata, "\n" );
+    }
+    exit CRITICAL;
 }
-if ($jobs_warn != -1 && $jobs_count > $jobs_warn) {
-  print "WARNING: jobs count: ", $jobs_count, " exeeds warning threshold: ", $jobs_warn, "\n";
-  if (! defined($args{noperfdata})) {
-    print ('|', $perfdata, "\n");
-  }
-  exit WARNING;
+if ( $jobs_warn != -1 && $jobs_count > $jobs_warn ) {
+    print "WARNING: jobs count: ", $jobs_count, " exeeds warning threshold: ",
+      $jobs_warn, "\n";
+    if ( !defined( $args{noperfdata} ) ) {
+        print( '|', $perfdata, "\n" );
+    }
+    exit WARNING;
 }
 my $failed_ratio = $failed_jobs * 100 / $arctive_jobs;
-if ($failed_ratio > $fail_crit) {
-  print ("CRITICAL: jobs count: ", $jobs_count, " Failed jobs ratio: ", $failed_ratio, '%');
-  if (! defined($args{noperfdata})) {
-    print ('|', $perfdata, "\n");
-  }
-  exit CRITICAL;
+if ( $failed_ratio > $fail_crit ) {
+    print(
+        "CRITICAL: jobs count: ",
+        $jobs_count, " Failed jobs ratio: ",
+        $failed_ratio, '%'
+    );
+    if ( !defined( $args{noperfdata} ) ) {
+        print( '|', $perfdata, "\n" );
+    }
+    exit CRITICAL;
 }
-if ($failed_ratio > $fail_warn) {
-  print ("WARNING: jobs count: ", $jobs_count, " Failed jobs ratio: ", $failed_ratio, '%');
-  if (! defined($args{noperfdata})) {
-    print ('|', $perfdata, "\n");
-  }
-  exit WARNING;
+if ( $failed_ratio > $fail_warn ) {
+    print(
+        "WARNING: jobs count: ",
+        $jobs_count, " Failed jobs ratio: ",
+        $failed_ratio, '%'
+    );
+    if ( !defined( $args{noperfdata} ) ) {
+        print( '|', $perfdata, "\n" );
+    }
+    exit WARNING;
 }
-print ('OK: jobs count: ', $jobs_count);
-if (! defined($args{noperfdata})) {
-    print ('|', $perfdata, "\n");
+print( 'OK: jobs count: ', $jobs_count );
+if ( !defined( $args{noperfdata} ) ) {
+    print( '|', $perfdata, "\n" );
 }
 exit OK;
- 
-sub trace {
+
+sub trace(@) {
     if ($debug) {
         print @_;
     }
 }
-
 __END__
 
 =head1 NAME

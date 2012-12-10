@@ -13,17 +13,20 @@ use LWP::UserAgent;
 use JSON;
 use Getopt::Long
   qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
-use Pod::Usage;
+use Pod::Usage qw(pod2usage);
 
 use constant PLUGINS_URL => "/pluginManager";
 use constant API_SUFFIX  => "/api/json";
 
-our $VERSION = '1.0';
+our $VERSION = '1.1';
 my $debug   = 0;
-my $timeout = 30;
+my $timeout = 10;
 my $sep     = ',';
-
 my %args;
+
+# Functions prototypes
+sub trace(@);
+
 GetOptions(
     \%args,
     'version|v' => sub { VersionMessage( { '-exitval' => 1 } ) },
@@ -94,16 +97,17 @@ foreach my $url (@ARGV) {
     }
 
     # Get PluginManager API
+    my $plugin_api_url =
+        $url
+      . PLUGINS_URL
+      . API_SUFFIX
+      . '?tree=plugins[active,enabled,hasUpdate,longName,version]';
     $req =
-      HTTP::Request->new( GET => $url . PLUGINS_URL . API_SUFFIX . "?depth=1" );
-    trace( "GET $url" . PLUGINS_URL . API_SUFFIX . "?depth=1 ...\n" );
+      HTTP::Request->new( GET => $plugin_api_url );
+    trace( "GET $url ...\n" );
     my $res = $ua->request($req);
     if ( !$res->is_success ) {
-        trace(
-            "can't get ",
-            $url . PLUGINS_URL . API_SUFFIX,
-            "?depth=1 ($res->{status_line})\n"
-        );
+        trace("can't get $url ($res->{status_line})\n");
         next;
     }
     my $json = new JSON;
@@ -114,8 +118,7 @@ foreach my $url (@ARGV) {
       }
       or do {
         $@ =~ s/\n//m;
-        trace( "can't parse JSON content (error $@) from url: ",
-            $url . PLUGINS_URL . API_SUFFIX, "\n" );
+        trace( "can't parse JSON content (error $@) from url: $url \n");
         next;
       };
     my $plugins = $obj->{'plugins'};    # ref to array
@@ -147,7 +150,7 @@ foreach my $name ( sort keys %plugins_tab ) {
 
 exit 0;
 
-sub trace {
+sub trace(@) {
     if ($debug) {
         print @_;
     }
