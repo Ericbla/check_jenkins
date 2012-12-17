@@ -1,13 +1,14 @@
 check_jenkins
 =============
 
-A set of 3 Nagios plugins to monitor Jenkins health.
+A set of 4 Nagios plugins to monitor Jenkins health.
 
 *  check_jenkins.pl
 *  check_jenkins_version.pl
 *  check_jenkins_job_time.pl
+*  check_jenkins_slaves.pl
 
-These 3 perl script use HTTP requests to query Jenkins API (json).
+These 4 perl scripts use HTTP requests to query Jenkins API (json).
 
 ## check_jenkins.pl ##
 
@@ -57,4 +58,29 @@ through NRPE by Nagios server.
 ### Usage: ###
 
     check_jenkins_job_time.pl --man
+        will print the manual page for this command
+        
+## check_jenkings_slaves.pl ##
+
+This Nagios plugin check the status of slaves of a Jenkins instance.
+
+You can specify one critical and/or one warning threshold express in % of the
+ratio of offline slaves.
+You can also specify warning/critical thresholds in % for the used executors
+ratio (per slave and globally)
+You can select a given slave with -n <slave-name> option or check all slaves
+defined on the master Jenkins specified by its url.
+You can choose to monitor state changes (with option --statefull) and be
+alerted when any slave has a status changed regarding previous call of this
+plugin.
+
+This module is written in Perl 5 and requires LWP::, JSON::, Getopt::,
+File::Spec and Pod:: packages.
+
+It has been checked on Windows and Linux platforms and can be run either directly or
+through NRPE by Nagios server.
+
+### Usage: ###
+
+    check_jenkins_slaves.pl --man
         will print the manual page for this command
