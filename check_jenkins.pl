@@ -128,7 +128,11 @@ if ( $jobs_warn != -1 && $jobs_count > $jobs_warn ) {
     }
     exit WARNING;
 }
-my $failed_ratio = $failed_jobs * 100 / $arctive_jobs;
+my $failed_ratio = 0;
+if ( $arctive_jobs != 0 ) {
+	my $failed_ratio = $failed_jobs * 100 / $arctive_jobs;
+}
+
 if ( $failed_ratio > $fail_crit ) {
     print(
         "CRITICAL: jobs count: ",
