@@ -9,7 +9,11 @@
 #
 # Author: Eric Blanchard
 #
+# It may be necessary to set
+# PERL_LWP_SSL_VERIFY_HOSTNAME=0
+#
 use strict;
+use warnings;
 use LWP::UserAgent;
 use JSON;
 use Getopt::Long
@@ -35,6 +39,8 @@ my $debug       = 0;
 my $status_line = '';
 my $exit_code   = UNKNOWN;
 my $timeout     = 10;
+my $user;
+my $apitoken;
 
 # Functions prototypes
 sub trace(@);
@@ -53,13 +59,15 @@ GetOptions(
     'warning|w=i'  => \$jobs_warn,
     'critical|c=i' => \$jobs_crit,
     'failedwarn=i' => \$fail_warn,
-    'failedcrit=i' => \$fail_crit
+    'failedcrit=i' => \$fail_crit,
+    'user=s'       => \$user,
+    'apitoken=s'   => \$apitoken,
   )
   or pod2usage( { '-exitval' => UNKNOWN } );
 HelpMessage(
     { '-msg' => 'Missing Jenkins url parameter', '-exitval' => UNKNOWN } )
   if scalar(@ARGV) != 1;
-$ciMasterUrl = $ARGV[0];
+$ciMasterUrl = "https://".$ARGV[0];
 $ciMasterUrl =~ s/\/$//;
 
 # Master API request
@@ -77,6 +85,9 @@ else {
 }
 my $url = $ciMasterUrl . API_SUFFIX . '?tree=jobs[color,name]';
 my $req = HTTP::Request->new( GET => $url );
+if (defined $user and defined $apitoken ) {
+    $req->authorization_basic( $user, $apitoken );
+}
 trace("GET $url ...\n");
 my $res = $ua->request($req);
 if ( !$res->is_success ) {
@@ -245,6 +256,14 @@ check_jenkins.pl [options] <jenkins-url>
 =item B<--failedcrit=>%
 
     The maximum ratio of failed jobs per enabled jobs for CRITICAL threshold
+    
+=item B<--user=>%
+
+    The user to use for login into Jenkins web interface.
+
+=item B<--apitoken=>%
+
+    The password or api token for the user above.
     
 =back
 
