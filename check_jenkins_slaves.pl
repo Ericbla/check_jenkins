@@ -51,6 +51,7 @@ my $total_executors_count = 0;
 my $total_running_ex      = 0;
 my $status_line           = '';
 my $status_line_ex        = '';
+my $perf_line_ex          = '';
 my $perfdata              = '';
 my $persitency_file;
 my %slaves_status;
@@ -287,7 +288,8 @@ if ($status == OK) {
 }
 
 # Print output status
-print($status_line , $perfdata, "\n", $status_line_ex);
+chomp($status_line_ex);
+print($status_line , $perfdata, "\n", $status_line_ex, "|", $perf_line_ex, "\n");
 exit $status;
 
 # Functions
@@ -295,6 +297,7 @@ exit $status;
 sub test_slave(\%) {
     my $slave     = shift;
     my $info_line = '';
+    my $perf_line = '';
     if (!defined($slave) || ref($slave) ne 'HASH') {
         trace("test_slave: No slave\n");
         return (UNKNOWN, 'test_slave: internal error');
@@ -302,6 +305,7 @@ sub test_slave(\%) {
     my $slave_name = $slave->{'displayName'};
     my $executors  = $slave->{'executors'};
     $info_line = "$slave_name";
+    $perf_line = "$slave_name=";
     my $executors_count = 0;
     my $running_ex      = 0;
     if (defined $executors) {
@@ -314,6 +318,8 @@ sub test_slave(\%) {
         }
     }
     $info_line .= ", $running_ex/$executors_count executors";
+    $perf_line .= ($running_ex / $executors_count);
+    $perf_line .= " ";
     if ($slave->{'offline'}) {
         $info_line .= ", <b>OFFLINE</b>";
         $total_offline_count++;
@@ -333,6 +339,7 @@ sub test_slave(\%) {
     $info_line .= "\n";
     trace($info_line);
     $status_line_ex .= $info_line;
+    $perf_line_ex .= $perf_line;
     if (   $ecrit != -1
         && $executors_count > 0
         && ($running_ex * 100 / $executors_count) >= $ecrit) {
