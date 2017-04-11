@@ -84,7 +84,7 @@ if ( !defined($jenkins_version) || $jenkins_version == '' ) {
     }
 }
 $exit_code   = OK;
-$status_line = "OK: Jenkins version: $jenkins_version\n";
+$status_line = "OK: Jenkins version: $jenkins_version";
 my $status_line_ext = '';
 if ( $jenkins_version < $crit_vers ) {
     $status_line =
@@ -131,6 +131,9 @@ if ( $jenkins_version >= '1.466' ) {
     $status_line .= " "
       . scalar(@$plugins)
       . " plugins installed ($require_update_count need update)\n";
+    if ( $require_update_count > 0 ) {
+        $exit_code = WARNING;
+    }
 }
 print($status_line);
 print($status_line_ext);
