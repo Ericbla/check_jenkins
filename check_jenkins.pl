@@ -15,6 +15,7 @@ use JSON;
 use Getopt::Long
   qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
 use Pod::Usage qw(pod2usage);
+use POSIX;
 
 # Nagios return values
 use constant {
@@ -130,7 +131,7 @@ if ( $jobs_warn != -1 && $jobs_count > $jobs_warn ) {
 }
 my $failed_ratio = 0;
 if ( $arctive_jobs != 0 ) {
-	my $failed_ratio = $failed_jobs * 100 / $arctive_jobs;
+	$failed_ratio = floor($failed_jobs * 100 / $arctive_jobs);
 }
 
 if ( $failed_ratio > $fail_crit ) {
