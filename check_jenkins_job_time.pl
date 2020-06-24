@@ -12,6 +12,7 @@
 # specified by its url.
 use strict;
 use LWP::UserAgent;
+use HTTP::Request::Common;
 use JSON;
 use Getopt::Long
   qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
@@ -51,6 +52,8 @@ GetOptions(
     'debug|d'     => \$debug,
     'timeout|t=i' => \$timeout,
     'proxy=s',
+    'user|u=s',
+    'password|p=s',
     'noproxy',
     'noperfdata',
     'warning|w=i'    => \$warn,
@@ -82,6 +85,9 @@ my $url =
   . API_SUFFIX
   . '?tree=jobs[name,url,buildable,lastBuild[number,building,timestamp,estimatedDuration]]';
 my $req = HTTP::Request->new( GET => $url );
+if ( defined( $args{user} ) ) {
+    $req->authorization_basic( $args{user}, $args{password} );
+}
 trace( "Get ", $url, " ...\n" );
 my $res = $ua->request($req);
 if ( !$res->is_success ) {
@@ -263,6 +269,8 @@ check_jenkins_job_time.pl [options] <jenkins-url>
                                HTTP_PROXY env)
          --noproxy             do not use HTTP_PROXY env
          --noperfdata          do not output perdata
+      -u --user                username for authentication
+      -p --password            password or api-key for authentication
       -w --warning=<percent>   the percentage of usual duration for the WARNING threshold
       -c --critical=<percent>  the percentage of usual duration for the CRITICAL threshold
          --absoluteWarn=<minutes> the duration in minutes for the WARNING threshold
@@ -301,6 +309,14 @@ check_jenkins_job_time.pl [options] <jenkins-url>
 =item B<--noproxy>
 
     Do not use HTTP_PROXY env
+
+=item B<-u> B<--user=>user
+
+    Username for authentication
+
+=item B<-p> B<--password=>password
+
+    Password or API-Key for authentication
 
 =item B<--noperfdata>
 

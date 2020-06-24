@@ -11,6 +11,7 @@
 #
 use strict;
 use LWP::UserAgent;
+use HTTP::Request::Common;
 use JSON;
 use Getopt::Long
   qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
@@ -49,6 +50,8 @@ GetOptions(
     'debug|d'     => \$debug,
     'timeout|t=i' => \$timeout,
     'proxy=s',
+    'user|u=s',
+    'password|p=s',
     'noproxy',
     'noperfdata',
     'warning|w=i'  => \$jobs_warn,
@@ -78,6 +81,9 @@ else {
 }
 my $url = $ciMasterUrl . API_SUFFIX . '?tree=jobs[color,name]';
 my $req = HTTP::Request->new( GET => $url );
+if ( defined( $args{user} and defined ($args{password}) ) ) {
+    $req->authorization_basic( $args{user}, $args{password} );
+}
 trace("GET $url ...\n");
 my $res = $ua->request($req);
 if ( !$res->is_success ) {
@@ -191,6 +197,8 @@ check_jenkins.pl [options] <jenkins-url>
          --proxy=<url>         the http proxy url (default from
                                HTTP_PROXY env)
          --noproxy             do not use HTTP_PROXY env
+      -u --user                username for authentication
+      -p --password            password or api-key for authentication
          --noperfdata          do not output perdata
       -w --warning=<count>     the maximum total jobs count for WARNING threshold
       -c --critical=<count>    the maximum total jobs count for CRITICAL threshold
@@ -230,6 +238,14 @@ check_jenkins.pl [options] <jenkins-url>
 =item B<--noproxy>
 
     Do not use HTTP_PROXY env
+
+=item B<-u> B<--user=>user
+
+    Username for authentication
+
+=item B<-p> B<--password=>password
+
+    Password or API-Key for authentication
 
 =item B<--noperfdata>
 

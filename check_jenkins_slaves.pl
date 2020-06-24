@@ -14,6 +14,7 @@
 #
 use strict;
 use LWP::UserAgent;
+use HTTP::Request::Common;
 use JSON;
 use Getopt::Long
   qw(GetOptions HelpMessage VersionMessage :config no_ignore_case bundling);
@@ -73,6 +74,8 @@ GetOptions(
     'timeout|t=i' => \$timeout,
     'proxy=s',
     'noproxy',
+    'user|u=s',
+    'password|p=s',
     'noperfdata',
     'statefull|s'    => \$compare,
     'warning|w=i'    => \$warn,
@@ -109,6 +112,9 @@ my $url =
   . API_SUFFIX
   . '?tree=computer[displayName,executors[idle],idle,offline,offlineCause[description],temporarilyOffline]';
 my $req = HTTP::Request->new(GET => $url);
+if ( defined( $args{user} ) ) {
+    $req->authorization_basic( $args{user}, $args{password} );
+}
 trace("Get ", $url, " ...\n");
 my $res = $ua->request($req);
 if (!$res->is_success) {
@@ -415,6 +421,8 @@ check_jenkins_slaves.pl [options] <jenkins-url>
          --proxy=<url>             the http proxy url (default from
                                    HTTP_PROXY env)
          --noproxy                 do not use HTTP_PROXY env
+      -u --user                    username for authentication
+      -p --password                password or api-key for authentication         
          --noperfdata              do not output perdata
       -s --statefull               turns on statefull (check difference with old states)
       -w --warning=<percent>       the percentage of offline slaves for the WARNING threshold
@@ -455,6 +463,14 @@ check_jenkins_slaves.pl [options] <jenkins-url>
 =item B<--noproxy>
 
     Do not use HTTP_PROXY env
+
+=item B<-u> B<--user=>user
+
+    Username for authentication
+
+=item B<-p> B<--password=>password
+
+    Password or API-Key for authentication
 
 =item B<--noperfdata>
 
